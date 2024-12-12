@@ -22,22 +22,6 @@ function addFolder(name = "New Folder", parent = null) {
     return folderItem;
 }
 
-function addFile(file, parent = null) {
-    const container = parent || document.getElementById("folderStructure");
-    const id = `file-${Date.now()}-${folderCounter++}`;
-    const fileItem = document.createElement("div");
-    fileItem.className = "file-item";
-    fileItem.id = id;
-    fileItem.draggable = true; // Ensure the file-item is draggable
-    fileItem.innerHTML = `
-            📄 <span class="file-name">${file.name}</span>
-            `;
-    console.log(file); // Log the file object to check its properties
-    fileItem.dataset.filePath = file.path || "unknown"; // Ensure the full path is stored
-    container.appendChild(fileItem);
-    makeFileSortable(fileItem); // Make the entire file-item sortable
-    return fileItem;
-}
 
 function handleFolderNameEdit(event) {
     if (event.key === "Enter") {
@@ -226,18 +210,38 @@ document.getElementById("loadFile").addEventListener("change", event => {
 
 document.getElementById("exportFile").addEventListener("click", exportToFile);
 
+
+
+
+//add file stuff
 document.getElementById("addFile").addEventListener("click", () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.onchange = event => {
-        const file = event.target.files[0];
-        if (file) {
-            console.log(file); // Log the file object to check its properties
-            addFile(file);
-        }
-    };
-    input.click();
-});
+    window.api.send("browse-file");
+  });
+  
+  window.api.on("file-selected", ({ directoryPath, fileName }) => {
+    console.log('Selected file path:', directoryPath, fileName);
+    addFile({ directoryPath, fileName });
+    window.electron.sendFilePath({ directoryPath, fileName }); // Send directory path and file name to main process
+  });
+  
+  function addFile({ directoryPath, fileName }, parent = null) {
+    const container = parent || document.getElementById("folderStructure");
+    const id = `file-${Date.now()}-${folderCounter++}`;
+    const fileItem = document.createElement("div");
+    fileItem.className = "file-item";
+    fileItem.id = id;
+    fileItem.draggable = true; // Ensure the file-item is draggable
+    fileItem.innerHTML = `
+      📄 <span class="file-name">${fileName}</span>
+    `;
+  
+    // Set the file path to the data-file-path attribute
+    fileItem.dataset.filePath = `${directoryPath}\\${fileName}`; // Use backslashes for Windows paths
+  
+    container.appendChild(fileItem);
+    makeFileSortable(fileItem); // Make the entire file-item sortable
+    return fileItem;
+  }
 
 window.addEventListener("DOMContentLoaded", () => {
     makeSortable(document.getElementById("folderStructure"));
