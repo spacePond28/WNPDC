@@ -30,15 +30,55 @@ function handleFolderNameEdit(event) {
     }
 }
 
-function getFolderStructure(container = document.getElementById("folderStructure")) {
-    return Array.from(container.children).map(child => {
+//read the folder structure 
+function getFolderStructure(element = document.getElementById("folderStructure")) {
+    return Array.from(element.children).map(child => {
         if (child.classList.contains("file-item")) {
-            return { name: child.querySelector(".file-name").innerText, path: child.dataset.filePath };
+            return {
+                name: child.querySelector(".file-name").innerText,
+                path: child.dataset.filePath
+            };
         } else {
-            return { name: child.querySelector(".folder-name").innerText, subFolders: getFolderStructure(child.querySelector(".nested")) };
+            return {
+                name: child.querySelector(".folder-name").innerText,
+                subFolders: getFolderStructure(child.querySelector(".nested"))
+            };
         }
     });
 }
+
+
+//export to .txt file 
+function exportToFile() {
+    const structure = getFolderStructure();
+    const text = convertStructureToText(structure);
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "folder_structure.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+document.getElementById("exportFile").addEventListener("click", exportToFile);
+
+function convertStructureToText(structure, level = 1) {
+    return structure.map(item => {
+      const indent = "-".repeat(level);
+      if (item.path) {
+        return `${indent}${item.name} [File: ${item.path}]\n`;
+      } else {
+        return `${indent}${item.name}\n${convertStructureToText(item.subFolders, level + 1)}`;
+      }
+    }).join("");
+  }
+
+document.getElementById("browseFolder").addEventListener("click", () => {
+    window.api.send("browse-folder");
+});
 
 function addFolderStructure(folder, parent = null) {
     const container = parent ? parent.querySelector(".nested") : document.getElementById("folderStructure");
@@ -128,56 +168,34 @@ function clearStructure() {
 }
 
 function parseStructure(lines) {
-    const result = [];
-    let current = result;
+    const structure = [];
+    let currentLevel = structure;
+  
     lines.forEach(line => {
-        const depth = (line.match(/-/g) || []).length;
-        const name = line.replace(/-/g, "").trim();
-        if (name) {
-            const folder = { name, subFolders: [] };
-            if (depth === 0) {
-                result.push(folder);
-                current = folder.subFolders;
-            } else {
-                let parent = result;
-                for (let i = 1; i < depth; i++) {
-                    parent = parent[parent.length - 1].subFolders;
-                }
-                parent.push(folder);
-                current = folder.subFolders;
-            }
+      const level = (line.match(/-/g) || []).length;
+      const name = line.replace(/-/g, "").trim();
+      const isFile = name.includes("[File:");
+      const itemName = isFile ? name.split(" [File:")[0].trim() : name;
+      const itemPath = isFile ? name.split(" [File:")[1].replace("]", "").trim() : null;
+  
+      const item = { name: itemName, path: itemPath, subFolders: [] };
+  
+      if (level === 1) {
+        structure.push(item);
+        currentLevel = item.subFolders;
+      } else {
+        let parent = structure;
+        for (let i = 1; i < level; i++) {
+          parent = parent[parent.length - 1].subFolders;
         }
+        parent.push(item);
+        currentLevel = item.subFolders;
+      }
     });
-    return result;
-}
+  
+    return structure;
+  }
 
-function exportToFile() {
-    const text = convertStructureToText(getFolderStructure());
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "folder_structure.txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-function convertStructureToText(structure, level = 1) {
-    return structure.map(item => {
-        const indent = "-".repeat(level);
-        if (item.path) {
-            return `${indent}${item.name} (File: ${item.path})\n`;
-        } else {
-            return `${indent}${item.name}\n${convertStructureToText(item.subFolders, level + 1)}`;
-        }
-    }).join("");
-}
-
-document.getElementById("browseFolder").addEventListener("click", () => {
-    window.api.send("browse-folder");
-});
 
 window.api.on("folder-selected", path => {
     document.getElementById("selectedFolder").value = path;
@@ -216,15 +234,15 @@ document.getElementById("exportFile").addEventListener("click", exportToFile);
 //add file stuff
 document.getElementById("addFile").addEventListener("click", () => {
     window.api.send("browse-file");
-  });
-  
-  window.api.on("file-selected", ({ directoryPath, fileName }) => {
+});
+
+window.api.on("file-selected", ({ directoryPath, fileName }) => {
     console.log('Selected file path:', directoryPath, fileName);
     addFile({ directoryPath, fileName });
     window.electron.sendFilePath({ directoryPath, fileName }); // Send directory path and file name to main process
-  });
-  
-  function addFile({ directoryPath, fileName }, parent = null) {
+});
+
+function addFile({ directoryPath, fileName }, parent = null) {
     const container = parent || document.getElementById("folderStructure");
     const id = `file-${Date.now()}-${folderCounter++}`;
     const fileItem = document.createElement("div");
@@ -232,16 +250,22 @@ document.getElementById("addFile").addEventListener("click", () => {
     fileItem.id = id;
     fileItem.draggable = true; // Ensure the file-item is draggable
     fileItem.innerHTML = `
-      📄 <span class="file-name">${fileName}</span>
-    `;
-  
+    📄 <span class="file-name">${fileName}</span>
+  `;
+
     // Set the file path to the data-file-path attribute
     fileItem.dataset.filePath = `${directoryPath}\\${fileName}`; // Use backslashes for Windows paths
-  
+
+    // Prevent dragging of the file-name span
+    const fileNameSpan = fileItem.querySelector(".file-name");
+    fileNameSpan.addEventListener("dragstart", (event) => {
+        event.preventDefault();
+    });
+
     container.appendChild(fileItem);
     makeFileSortable(fileItem); // Make the entire file-item sortable
     return fileItem;
-  }
+}
 
 window.addEventListener("DOMContentLoaded", () => {
     makeSortable(document.getElementById("folderStructure"));
