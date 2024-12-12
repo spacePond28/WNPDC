@@ -1,0 +1,44 @@
+{
+  "name": "wnpdc",
+  "version": "1.0.0",
+  "description": "A simple application for creating project directory structure",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "Weave Creative Limited",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.1",
+    "bootstrap": "^5.3.0",
+    "sortablejs": "^1.15.6"
+  },
+  "build": {
+    "appId": "com.weavecreative.wnpdc",
+    "productName": "WNPDC",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "main.js",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "ico/WNPDC.icns"
+    },
+    "win": {
+      "icon": "ico/WNPDC.ico"
+    },
+    "linux": {
+      "icon": "ico/WNPDC512.png"
+    }
+  }
+}

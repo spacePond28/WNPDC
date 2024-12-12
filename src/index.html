@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WNPDC</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+    <style>
+ body {
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+}
+
+.container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.folder, .file-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-bottom: 2px;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+}
+
+.folder:hover, .file-item:hover {
+    background-color: #f1f1f1;
+}
+
+.folder-icon, .file-header {
+    margin-right: 10px;
+}
+
+.nested {
+    transition: all 0.3s ease-in-out;
+    padding-left: 20px;
+}
+
+.nested.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.btn {
+    margin-right: 10px;
+}
+
+.legend {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+#defaultStructureInput {
+    display: none;
+}
+
+.delete-folder {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.trash-bin {
+    border: 2px dashed #dc3545;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    height: 100%;
+}
+
+.trash-bin i {
+    font-size: 2rem;
+    color: #dc3545;
+}
+
+.accordion-item {
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 2px;
+}
+
+.accordion-button {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 4px 8px;
+}
+
+.accordion-button:not(.collapsed) {
+    color: #000;
+}
+
+.accordion-button::after {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    margin-left: auto;
+    content: "";
+    background: url('data:image/svg+xml;charset=utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"%3E%3Cpath fill="none" stroke="%23000" stroke-width="1.5" d="M1 5l7 7 7-7"/%3E%3C/svg%3E') no-repeat center center;
+    transform: rotate(0deg);
+    transition: transform 0.2s ease-in-out;
+}
+
+.accordion-button:not(.collapsed)::after {
+    transform: rotate(180deg);
+}
+
+    </style>
+</head>
+
+<body>
+    <section>
+        <div class="container">
+            <h1 class="mb-4 text-center">Create Your Folder Structure</h1>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <fieldset class="form-group border rounded-3 p-3">
+                <legend class="float-none w-auto legend">Select Directory</legend>
+                <button id="browseFolder" class="btn btn-primary mb-2">Select Directory</button>
+                <input type="text" id="selectedFolder" class="form-control" readonly>
+            </fieldset>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <fieldset class="form-group border rounded-3 p-3 bg-light">
+                <legend class="float-none w-auto legend">Folder Structure</legend>
+                <div class="row">
+                    <div class="col-md-8">
+                        <label for="folderStructure">Folder Structure:</label>
+                        <div id="folderStructure" class="accordion"></div>
+                        <textarea id="defaultStructureInput">
+    -AFX
+    -Assets
+    --AFX RENDERS
+    --C4D RENDERS
+    --BLENDER RENDERS
+    --PROXIES
+    --Fonts
+    --Obj
+    --FOOTAGE
+    -C4D
+    --tex
+    -BLENDER
+    --tex
+    -RENDERS
+    --ProRes
+    --Mp4
+    --Still
+    --Multipass
+    --Draft Version
+    -Premiere
+    -Docs
+    --Ref
+    --Scripts
+    --Storyboards
+                        </textarea>
+    
+                        <fieldset class="form-group border rounded-3 p-3">
+                            <legend class="float-none w-auto legend">Actions</legend>
+                            <button id="addFolder" class="btn btn-secondary">Add Folder</button>
+                            <button id="addFile" class="btn btn-secondary">Add File</button>
+                            <button id="resetStructure" class="btn btn-warning">Reset Structure</button>
+                            <input type="file" id="loadFile" class="btn btn-info mt-2">
+                            <button id="exportFile" class="btn btn-success mt-2">Export as .txt</button>
+                        </fieldset>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="trash-bin" id="trashBin">
+                            <i class="fas fa-trash-alt"></i>
+                            <p>Drag here to delete</p>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </section>
+    <section>
+        <div class="container">
+            <fieldset class="form-group border rounded-3 p-3">
+                <legend class="float-none w-auto legend">Create Directories</legend>
+                <button id="createFolders" class="btn btn-success" disabled>Create Directories</button>
+            </fieldset>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <fieldset class="form-group border rounded-3 p-3">
+                <legend class="float-none w-auto legend">Formatting the .txt File</legend>
+                <p>To format your .txt file for loading the folder structure, use the following guidelines:</p>
+                <ul>
+                    <li>Use a hyphen (<code>-</code>) to denote a folder.</li>
+                    <li>Indent subfolders with additional hyphens.</li>
+                    <li>Ensure each folder name is on a new line.</li>
+                    <li>Example structure:
+                        <pre>
+-AFX
+-Assets
+--AFX RENDERS
+--C4D RENDERS
+--BLENDER RENDERS
+--PROXIES
+--Fonts
+--Obj
+--FOOTAGE
+-C4D
+--tex
+-BLENDER
+--tex
+-RENDERS
+--ProRes
+--Mp4
+--Still
+--Multipass
+--Draft Version
+-Premiere
+-Docs
+--Ref
+--Scripts
+--Storyboards
+                        </pre>
+                    </li>
+                </ul>
+            </fieldset>
+        </div>
+    </section>
+
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../node_modules/sortablejs/Sortable.min.js"></script>
+    <script src="../node_modules/@fortawesome/fontawesome-free/js/all.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+
+</html>
