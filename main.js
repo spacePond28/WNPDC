@@ -82,20 +82,27 @@ function createWindow() {
 }
 
 function createFolders(basePath, folderStructure) {
-  folderStructure.forEach((item) => {
-    const itemPath = path.join(basePath, item.name);
-    if (item.path) {
-      // It's a file, copy it
-      fs.copyFileSync(item.path, itemPath);
-    } else {
-      // It's a folder, create it and recurse
-      fs.mkdirSync(itemPath, { recursive: true });
-      if (item.subFolders.length > 0) {
-        createFolders(itemPath, item.subFolders);
+    folderStructure.forEach((item) => {
+      const itemPath = path.join(basePath, item.name);
+      if (item.path) {
+        // It's a file, copy it
+        const sourceFilePath = item.path;
+        const destinationFilePath = itemPath;
+        fs.copyFileSync(sourceFilePath, destinationFilePath);
+      } else {
+        // It's a folder, create it and recurse
+        fs.mkdirSync(itemPath, { recursive: true });
+        if (item.subFolders.length > 0) {
+          createFolders(itemPath, item.subFolders);
+        }
       }
-    }
+    });
+  }
+  
+  ipcMain.on('create-folders', async (event, data) => {
+    createFolders(data.path, data.folderStructure);
+    dialog.showMessageBox({ message: 'Directories and files created!', buttons: ['OK'] });
   });
-}
 
 app.whenReady().then(() => {
   createWindow();
