@@ -1,0 +1,17 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.weavecreative.wnpdc
+productName: WNPDC
+files:
+  - filter:
+      - src/*
+      - main.js
+      - package.json
+mac:
+  icon: ico/WNPDC.icns
+win:
+  icon: ico/WNPDC.ico
+linux:
+  icon: ico/WNPDC512.png
+electronVersion: 33.2.1
