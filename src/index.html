@@ -33,9 +33,11 @@
     background-color: #f1f1f1;
 }
 
+
 .folder-icon, .file-header {
     margin-right: 10px;
 }
+
 
 .nested {
     transition: all 0.3s ease-in-out;
@@ -117,15 +119,20 @@
     transform: rotate(180deg);
 }
 
+.d-flex.flex-column.gap-3 {
+    gap: 1rem; /* Adjust this value to control the vertical spacing between groups */
+}
+
+.d-flex.flex-wrap.gap-2 {
+    gap: 0.5rem; /* Adjust this value to control the spacing between buttons within a group */
+}
+
+
     </style>
 </head>
 
 <body>
-    <section>
-        <div class="container">
-            <h1 class="mb-4 text-center">Create Your Folder Structure</h1>
-        </div>
-    </section>
+
 
     <section>
         <div class="container">
@@ -146,46 +153,65 @@
                         <label for="folderStructure">Folder Structure:</label>
                         <div id="folderStructure" class="accordion"></div>
                         <textarea id="defaultStructureInput">
-    -AFX
-    -Assets
-    --AFX RENDERS
-    --C4D RENDERS
-    --BLENDER RENDERS
-    --PROXIES
-    --Fonts
-    --Obj
-    --FOOTAGE
-    -C4D
-    --tex
-    -BLENDER
-    --tex
-    -RENDERS
-    --ProRes
-    --Mp4
-    --Still
-    --Multipass
-    --Draft Version
-    -Premiere
-    -Docs
-    --Ref
-    --Scripts
-    --Storyboards
+-AFX
+-Assets
+--AFX RENDERS
+--C4D RENDERS
+--BLENDER RENDERS
+--PROXIES
+--Fonts
+--Obj
+--FOOTAGE
+---GrabDJIFootage.bat [File: H:\RESOURCES\Batch Scripts\GrabDJIFootage.bat]
+---GrabPanasonicFootage.bat [File: H:\RESOURCES\Batch Scripts\GrabPanasonicFootage.bat]
+-C4D
+--tex
+-BLENDER
+--tex
+-RENDERS
+--ProRes
+--Mp4
+---autoScreenGrab.bat [File: H:\RESOURCES\Batch Scripts\autoScreenGrab.bat]
+--Still
+--Multipass
+--Draft Version
+-Premiere
+-Docs
+--Ref
+--Scripts
+--Storyboards
                         </textarea>
     
                         <fieldset class="form-group border rounded-3 p-3">
                             <legend class="float-none w-auto legend">Actions</legend>
-                            <button id="addFolder" class="btn btn-secondary">Add Folder</button>
-                            <button id="addFile" class="btn btn-secondary">Add File</button>
-                            <button id="resetStructure" class="btn btn-warning">Reset Structure</button>
-                            <input type="file" id="loadFile" class="btn btn-info mt-2">
-                            <button id="exportFile" class="btn btn-success mt-2">Export as .txt</button>
+                            <div class="d-flex flex-column gap-3">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button id="addFolder" class="btn btn-secondary">Add Folder</button>
+                                    <button id="addFile" class="btn btn-secondary">Add File</button>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button id="resetStructure" class="btn btn-warning">Reset Structure</button>
+                                    <button id="clearAll" class="btn btn-danger">Clear All</button>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <input type="file" id="loadFile" class="btn btn-info">
+                                    <button id="exportFile" class="btn btn-success">Export as .txt</button>
+                                    <button id="saveDefault" class="btn btn-secondary">Save as Default
+                                </div>
+                            </div>
                         </fieldset>
+                        
+                        
                     </div>
                     <div class="col-md-4">
+
                         <div class="trash-bin" id="trashBin">
                             <i class="fas fa-trash-alt"></i>
                             <p>Drag here to delete</p>
                         </div>
+
+
+                        
                     </div>
                 </div>
             </fieldset>
@@ -209,6 +235,7 @@
                     <li>Use a hyphen (<code>-</code>) to denote a folder.</li>
                     <li>Indent subfolders with additional hyphens.</li>
                     <li>Ensure each folder name is on a new line.</li>
+                    <li>Files: filenameexample.pdf [File:H:\RESOURCES\masterPDF\filenameexample.pdf]</li>
                     <li>Example structure:
                         <pre>
 -AFX
@@ -220,6 +247,8 @@
 --Fonts
 --Obj
 --FOOTAGE
+---GrabDJIFootage.bat [File: H:\RESOURCES\Batch Scripts\GrabDJIFootage.bat]
+---GrabPanasonicFootage.bat [File: H:\RESOURCES\Batch Scripts\GrabPanasonicFootage.bat]
 -C4D
 --tex
 -BLENDER
@@ -227,6 +256,7 @@
 -RENDERS
 --ProRes
 --Mp4
+---autoScreenGrab.bat [File: H:\RESOURCES\Batch Scripts\autoScreenGrab.bat]
 --Still
 --Multipass
 --Draft Version

@@ -3,11 +3,9 @@ let folderCounter = 0;
 function addFolder(name = "New Folder", parent = null) {
     const container = parent || document.getElementById("folderStructure");
     const folderId = `folder-${Date.now()}-${folderCounter++}`;
-    const accordionId = container.id || `folderStructure-${folderCounter}`;
-    container.id = accordionId;
-    const folderItem = document.createElement("div");
-    folderItem.className = "accordion-item";
-    folderItem.innerHTML = `
+    const folderElement = document.createElement("div");
+    folderElement.className = "accordion-item";
+    folderElement.innerHTML = `
         <h2 class="accordion-header" id="heading-${folderId}">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${folderId}" aria-expanded="false" aria-controls="collapse-${folderId}">
                 📁 <span class="folder-name" contenteditable="true" onkeydown="handleFolderNameEdit(event)">${name}</span>
@@ -17,10 +15,11 @@ function addFolder(name = "New Folder", parent = null) {
             <div class="accordion-body nested"></div>
         </div>
     `;
-    container.appendChild(folderItem);
-    makeSortable(folderItem.querySelector(".nested"));
-    return folderItem;
+    container.appendChild(folderElement);
+    makeSortable(folderElement.querySelector(".nested"));
+    return folderElement;
 }
+
 
 
 function handleFolderNameEdit(event) {
@@ -80,17 +79,24 @@ document.getElementById("browseFolder").addEventListener("click", () => {
     window.api.send("browse-folder");
 });
 
-function addFolderStructure(folder, parent = null) {
+function addFolderStructure(item, parent = null) {
     const container = parent ? parent.querySelector(".nested") : document.getElementById("folderStructure");
+
+    
+
     if (container) {
-        if (folder.path) {
-            addFile({ name: folder.name, path: folder.path }, container);
+        if (item.path) {
+            const directoryPath = item.path.substring(0, item.path.lastIndexOf("\\"));
+            const fileName = item.path.substring(item.path.lastIndexOf("\\") + 1);
+            addFile({ directoryPath, fileName }, container);
         } else {
-            const folderElement = addFolder(folder.name, container);
-            folder.subFolders.forEach(subFolder => addFolderStructure(subFolder, folderElement));
+            const folder = addFolder(item.name, container);
+            item.subFolders.forEach(subItem => addTxtFolderStructure(subItem, folder));
         }
     }
 }
+
+
 
 function makeSortable(container) {
     new Sortable(container, {
@@ -98,29 +104,31 @@ function makeSortable(container) {
         animation: 150,
         fallbackOnBody: true,
         swapThreshold: 0.65,
-        onAdd: function (evt) {
-            const itemEl = evt.item;
-            if (!itemEl.classList.contains("file-item")) {
-                let nested = itemEl.querySelector(".nested");
-                if (!nested) {
-                    nested = document.createElement("div");
-                    nested.className = "accordion-body nested";
-                    const collapseElement = itemEl.querySelector(".accordion-collapse");
+        onAdd: function (event) {
+            const item = event.item;
+            if (!item.classList.contains("file-item")) {
+                let nestedContainer = item.querySelector(".nested");
+                if (!nestedContainer) {
+                    nestedContainer = document.createElement("div");
+                    nestedContainer.className = "accordion-body nested";
+                    const collapseElement = item.querySelector(".accordion-collapse");
                     if (collapseElement) {
-                        collapseElement.appendChild(nested);
+                        collapseElement.appendChild(nestedContainer);
                     }
                 }
-                const accordionItem = itemEl.closest(".accordion-item");
-                if (accordionItem) {
-                    const accordionButton = accordionItem.querySelector(".accordion-button");
-                    if (accordionButton) {
-                        accordionButton.style.display = "block";
+                const parentItem = item.closest(".accordion-item");
+                if (parentItem) {
+                    const buttonElement = parentItem.querySelector(".accordion-button");
+                    if (buttonElement) {
+                        buttonElement.style.display = "block";
                     }
                 }
             }
+           
         }
     });
 }
+
 
 function makeFileSortable(fileItem) {
     new Sortable(fileItem, {
@@ -145,6 +153,7 @@ function saveConfig(config) {
     localStorage.setItem("folderConfig", JSON.stringify(config));
 }
 
+// Load configuration from localStorage
 function loadConfig() {
     clearStructure();
     const savedConfig = localStorage.getItem("folderConfig");
@@ -155,10 +164,47 @@ function loadConfig() {
     }
 }
 
+
+// Save user default structure
+document.getElementById("saveDefault").addEventListener("click", saveDefaultStructure);
+
+function saveDefaultStructure() {
+    const currentStructure = getFolderStructure();
+    localStorage.setItem("userDefaultStructure", JSON.stringify(currentStructure));
+    alert("Default structure saved!");
+}
+
+// Reset to user default structure
+document.getElementById("resetStructure").addEventListener("click", resetToUserDefaultStructure);
+
+function resetToUserDefaultStructure() {
+    clearStructure();
+    const userDefaultStructure = localStorage.getItem("userDefaultStructure");
+    if (userDefaultStructure) {
+        const structure = JSON.parse(userDefaultStructure);
+        structure.forEach(item => {
+            if (item.name && item.name.trim() !== "") {
+                addFolderStructure(item);
+            }
+        });
+    } else {
+        alert("No default structure saved. Please save a default structure first.");
+    }
+}
+
+// Reset to predefined default structure
 function resetToDefaultStructure() {
     clearStructure();
-    parseStructure(document.getElementById("defaultStructureInput").value.split("\n")).forEach(folder => addFolderStructure(folder));
+    const defaultStructure = parseStructure(document.getElementById("defaultStructureInput").value.split("\n"));
+    defaultStructure.forEach(folder => {
+        if (folder.name && folder.name.trim() !== "") {
+            addFolderStructure(folder);
+        }
+    });
 }
+
+
+
 
 function clearStructure() {
     const folderStructure = document.getElementById("folderStructure");
@@ -170,31 +216,36 @@ function clearStructure() {
 function parseStructure(lines) {
     const structure = [];
     let currentLevel = structure;
-  
+
     lines.forEach(line => {
-      const level = (line.match(/-/g) || []).length;
-      const name = line.replace(/-/g, "").trim();
-      const isFile = name.includes("[File:");
-      const itemName = isFile ? name.split(" [File:")[0].trim() : name;
-      const itemPath = isFile ? name.split(" [File:")[1].replace("]", "").trim() : null;
-  
-      const item = { name: itemName, path: itemPath, subFolders: [] };
-  
-      if (level === 1) {
-        structure.push(item);
-        currentLevel = item.subFolders;
-      } else {
-        let parent = structure;
-        for (let i = 1; i < level; i++) {
-          parent = parent[parent.length - 1].subFolders;
+        const level = (line.match(/-/g) || []).length;
+        const name = line.replace(/-/g, "").trim();
+        if (name === "") return; // Skip empty lines
+        const isFile = name.includes("[File:");
+        const item = {
+            name: isFile ? name.split(" [File:")[0].trim() : name,
+            path: isFile ? name.split(" [File:")[1].replace("]", "").trim() : null,
+            subFolders: []
+        };
+
+        if (level === 1) {
+            structure.push(item);
+            currentLevel = item.subFolders;
+        } else {
+            let parent = structure;
+            for (let i = 1; i < level; i++) {
+                parent = parent[parent.length - 1].subFolders;
+            }
+            parent.push(item);
+            currentLevel = item.subFolders;
         }
-        parent.push(item);
-        currentLevel = item.subFolders;
-      }
     });
-  
+
     return structure;
-  }
+}
+
+
+
 
 
 window.api.on("folder-selected", path => {
@@ -212,24 +263,6 @@ document.getElementById("createFolders").addEventListener("click", () => {
 });
 
 document.getElementById("addFolder").addEventListener("click", () => addFolder("New Folder"));
-document.getElementById("resetStructure").addEventListener("click", resetToDefaultStructure);
-document.getElementById("loadFile").addEventListener("change", event => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            const lines = parseStructure(e.target.result.split("\n"));
-            clearStructure();
-            lines.forEach(folder => addFolderStructure(folder));
-        };
-        reader.readAsText(file);
-    }
-});
-
-document.getElementById("exportFile").addEventListener("click", exportToFile);
-
-
-
 
 //add file stuff
 document.getElementById("addFile").addEventListener("click", () => {
@@ -237,35 +270,29 @@ document.getElementById("addFile").addEventListener("click", () => {
 });
 
 window.api.on("file-selected", ({ directoryPath, fileName }) => {
-    console.log('Selected file path:', directoryPath, fileName);
     addFile({ directoryPath, fileName });
     window.electron.sendFilePath({ directoryPath, fileName }); // Send directory path and file name to main process
 });
 
 function addFile({ directoryPath, fileName }, parent = null) {
     const container = parent || document.getElementById("folderStructure");
-    const id = `file-${Date.now()}-${folderCounter++}`;
-    const fileItem = document.createElement("div");
-    fileItem.className = "file-item";
-    fileItem.id = id;
-    fileItem.draggable = true; // Ensure the file-item is draggable
-    fileItem.innerHTML = `
-    📄 <span class="file-name">${fileName}</span>
-  `;
-
-    // Set the file path to the data-file-path attribute
-    fileItem.dataset.filePath = `${directoryPath}\\${fileName}`; // Use backslashes for Windows paths
-
-    // Prevent dragging of the file-name span
-    const fileNameSpan = fileItem.querySelector(".file-name");
-    fileNameSpan.addEventListener("dragstart", (event) => {
+    const fileId = `file-${Date.now()}-${folderCounter++}`;
+    const fileElement = document.createElement("div");
+    fileElement.className = "file-item";
+    fileElement.id = fileId;
+    fileElement.draggable = true;
+    fileElement.innerHTML = `
+        📄 <span class="file-name">${fileName}</span>
+    `;
+    fileElement.dataset.filePath = `${directoryPath}\\${fileName}`;
+    fileElement.querySelector(".file-name").addEventListener("dragstart", (event) => {
         event.preventDefault();
     });
-
-    container.appendChild(fileItem);
-    makeFileSortable(fileItem); // Make the entire file-item sortable
-    return fileItem;
+    container.appendChild(fileElement);
+    makeFileSortable(fileElement);
+    return fileElement;
 }
+
 
 window.addEventListener("DOMContentLoaded", () => {
     makeSortable(document.getElementById("folderStructure"));
@@ -282,3 +309,102 @@ new Sortable(trashBin, {
         }
     }
 });
+
+//clear all function
+document.getElementById("clearAll").addEventListener("click", clearAll);
+
+function clearAll() {
+    clearStructure();
+    saveConfig([]); // Save an empty configuration to localStorage
+}
+
+
+
+// Load and parse from .txt files
+function parseTxtStructure(lines) {
+    const structure = [];
+    let currentLevel = structure;
+
+    lines.forEach(line => {
+        const level = (line.match(/-/g) || []).length;
+        const name = line.replace(/-/g, "").trim();
+        if (name === "") return; // Skip empty lines
+        const isFile = name.includes("[File:");
+        const item = {
+            name: isFile ? name.split(" [File:")[0].trim() : name,
+            path: isFile ? name.split(" [File:")[1].replace("]", "").trim() : null,
+            subFolders: []
+        };
+
+        if (level === 1) {
+            structure.push(item);
+            currentLevel = item.subFolders;
+        } else {
+            let parent = structure;
+            for (let i = 1; i < level; i++) {
+                parent = parent[parent.length - 1].subFolders;
+            }
+            parent.push(item);
+            currentLevel = item.subFolders;
+        }
+    });
+
+    return structure;
+}
+
+
+
+function addTxtFolderStructure(item, parent = null) {
+    const container = parent ? parent.querySelector(".nested") : document.getElementById("folderStructure");
+    if (container) {
+        if (item.path) {
+            const directoryPath = item.path.substring(0, item.path.lastIndexOf("\\"));
+            const fileName = item.path.substring(item.path.lastIndexOf("\\") + 1);
+            addFile({ directoryPath, fileName }, container);
+        } else {
+            const folder = addFolder(item.name, container);
+            item.subFolders.forEach(subItem => addTxtFolderStructure(subItem, folder));
+        }
+    }
+}
+
+
+
+document.getElementById("loadFile").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const lines = e.target.result.split("\n");
+            const structure = parseTxtStructure(lines);
+            clearStructure();
+            structure.forEach(item => addTxtFolderStructure(item));
+        };
+        reader.readAsText(file);
+    }
+});
+
+
+// Observe changes in the folder structure
+function observeFolderStructure() {
+    const folderStructure = document.getElementById("folderStructure");
+
+    const observer = new MutationObserver(() => {
+        saveConfig(getFolderStructure());
+    });
+
+    observer.observe(folderStructure, {
+        childList: true,
+        subtree: true,
+        attributes: true
+    });
+}
+
+// Call the observeFolderStructure function when the DOM is loaded
+window.addEventListener("DOMContentLoaded", () => {
+    makeSortable(document.getElementById("folderStructure"));
+    loadConfig();
+    observeFolderStructure(); // Start observing changes
+});
+
+

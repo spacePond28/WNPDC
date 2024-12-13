@@ -27,7 +27,7 @@
       "output": "dist"
     },
     "files": [
-      "src/**/*",
+      "src/*",
       "main.js",
       "package.json"
     ],
